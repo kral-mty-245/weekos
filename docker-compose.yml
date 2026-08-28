@@ -1,0 +1,66 @@
+# WeeK OS Docker Build
+# Kullanım: docker-compose run --rm weekos-builder
+
+version: '3.8'
+
+services:
+  weekos-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weekos-builder
+    volumes:
+      - .:/workspace
+    command: ./build.sh
+    working_dir: /workspace
+
+  # Sadece ISO oluştur
+  weekos-iso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weekos-iso
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        echo '============================================' &&
+        echo '  WeeK OS ISO Builder' &&
+        echo '============================================' &&
+        mkdir -p build isodir/boot/grub &&
+        echo 'Derleniyor...' &&
+        make 2>&1 || echo 'Make başarısız, manuel derleme deneniyor...' &&
+        bash build.sh
+      "
+    working_dir: /workspace
+
+  # Temizle
+  weekos-clean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weekos-clean
+    volumes:
+      - .:/workspace
+    command: make clean
+    working_dir: /workspace
+
+  # Test (QEMU ile)
+  weekos-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weekos-test
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        if [ -f weekos.iso ]; then
+          echo 'Testing in QEMU...' &&
+          qemu-system-i386 -cdrom weekos.iso -m 512M -vga std -boot d
+        else
+          echo 'ISO not found. Run build first.'
+        fi
+      "
+    working_dir: /workspace
+    privileged: true

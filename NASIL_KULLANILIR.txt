@@ -1,0 +1,56 @@
+╔══════════════════════════════════════════════════════════╗
+║              WeeK OS - NASIL KULLANILIR?                ║
+╚══════════════════════════════════════════════════════════╝
+
+  3 KOLAY ADIM:
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ADIM 1: Docker Desktop'i kur
+  ─────────────────────────────
+  - git: https://docs.docker.com/desktop/install/windows-install/
+  - Indir, kur, bilgisayari yeniden baslat
+  - Docker Desktop'i ac (sistem tepsisinde yesil ikon gorunmeli)
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ADIM 2: ISO olustur
+  ─────────────────────────────
+  - Bu klasordeki "JAKZAT.bat" dosyasina CIFT TIKLA
+  - 2-5 dakika bekle
+  - "ISO HAZIR!" mesajini gor
+  - weekos.iso dosyasi olusturulur
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ADIM 3: VirtualBox'ta calistir
+  ─────────────────────────────
+  - VirtualBox'i indir: https://www.virtualbox.org/
+  - "Yeni" butonuna tikla
+  - Ad: "WeeK OS"
+  - Tip: Linux > Other Linux (32-bit)
+  - RAM: 2048 MB
+  - Disk: 20 GB
+  - Ayarlar > Depolama > weekos.iso bagla
+  - "Baslat" butonuna tikla
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+  BONUS: Tek komutla (PowerShell)
+  ─────────────────────────────
+  PowerShell'i ac ve su komutu calistir:
+
+  wsl --install; sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso mtools; cp -r /mnt/c/Users/Kerem/Desktop/weekos ~/; cd ~/weekos && ./build.sh; cp weekos.iso /mnt/c/Users/Kerem/Desktop/
+
+
+  SORUNLAR ICIN:
+  ─────────────────────────────
+  - Docker bulunamadi → Yukaridaki linkten kur
+  - ISO olusmadi → JAKZAT.bat ciktisini kontrol et
+  - VirtualBox acilmadi → VirtualBox'i guncelle
+  - Ekran kucuk → VirtualBox'ta View > Auto-resize Guest
+  - Mouse kacti → Sol Ctrl tusu ile serbest birak
+
+
+  IYI CALISMALAR! 🎮
