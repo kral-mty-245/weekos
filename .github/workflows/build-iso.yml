@@ -18,130 +18,71 @@ jobs:
         
         echo "=== WeeK OS Builder ==="
         
-        # Dizinleri olustur
-        mkdir -p build/{rootfs,image/{casper,boot/grub,isolinux}}
-        
-        # Gerekli paketler
         sudo apt-get update -qq
         sudo apt-get install -y -qq debootstrap squashfs-tools xorriso
         
-        # Rootfs olustur
-        echo "Rootfs olusturuluyor..."
-        sudo debootstrap --arch=amd64 \
-          --include=ubuntu-desktop,kde-plasma-desktop,dolphin,konsole,firefox,libreoffice,vlc,gimp,neofetch,htop \
-          jammy build/rootfs http://archive.ubuntu.com/ubuntu/
+        mkdir -p build/{rootfs,image/{casper,boot/grub}}
         
-        # Sistem ayarlari
-        echo "Sistem ayarlaniyor..."
+        echo "Rootfs olusturuluyor..."
+        sudo debootstrap --arch=amd64 jammy build/rootfs http://archive.ubuntu.com/ubuntu/
+        
+        echo "Paketler kuruluyor..."
         sudo chroot build/rootfs /bin/bash << 'CHROOT'
-          # Sifreler
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq \
+            ubuntu-desktop \
+            kde-standard \
+            sddm \
+            dolphin \
+            konsole \
+            firefox \
+            libreoffice \
+            vlc \
+            gimp \
+            htop \
+            git \
+            curl
+            
           echo "user:weekos" | chpasswd
           echo "root:weekos" | chpasswd
-          
-          # Kullanici olustur
           useradd -m -s /bin/bash user || true
           echo "user:weekos" | chpasswd
           
-          # Otomatik giris
           mkdir -p /etc/sddm.conf.d
-          cat > /etc/sddm.conf.d/autologin.conf << 'EOF'
-          [Autologin]
-          User=user
-          EOF
+          echo -e "[Autologin]\nUser=user" > /etc/sddm.conf.d/autologin.conf
           
-          # Varsayilan tema
-          mkdir -p /usr/share/plasma/look-and-feel/weekos
-          cat > /usr/share/plasma/look-and-feel/weekos/metadata.desktop << 'EOF'
-          [Desktop Entry]
-          Name=WeeK OS
-          Comment=WeeK OS Liquid Glass Theme
-          EOF
-          
-          # Masaustu kisayollari
           mkdir -p /home/user/Desktop
-          cat > /home/user/Desktop/dolphin.desktop << 'EOF'
-          [Desktop Entry]
-          Name=Dosya Gezgini
-          Exec=/usr/bin/dolphin
-          Icon=system-file-manager
-          Terminal=false
-          Type=Application
-          EOF
-          
-          cat > /home/user/Desktop/konsole.desktop << 'EOF'
-          [Desktop Entry]
-          Name=Terminal
-          Exec=/usr/bin/konsole
-          Icon=utilities-terminal
-          Terminal=false
-          Type=Application
-          EOF
-          
-          cat > /home/user/Desktop/systemsettings.desktop << 'EOF'
-          [Desktop Entry]
-          Name=Ayarlar
-          Exec=/usr/bin/systemsettings
-          Icon=preferences-system
-          Terminal=false
-          Type=Application
-          EOF
-          
+          for f in dolphin konsole systemsettings; do
+            echo -e "[Desktop Entry]\nName=$f\nExec=/usr/bin/$f\nTerminal=false\nType=Application" > /home/user/Desktop/$f.desktop
+          done
           chmod +x /home/user/Desktop/*.desktop
           chown -R 1000:1000 /home/user
-          
-          # Autostart
-          mkdir -p /home/user/.config/autostart
-          cat > /home/user/.config/autostart/weekos-welcome.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=WeeK OS Welcome
-          Exec=kdialog --title "WeeK OS" --msgbox "Hos Geldiniz!\n\nWeeK OS v1.0.0\nLiquid Glass Desktop\n\nSifre: weekos"
-          X-GNOME-Autostart-enabled=true
-          EOF
-          chown -R 1000:1000 /home/user/.config
         CHROOT
         
-        # Kernel kopyala
         echo "Kernel kopyalaniyor..."
-        VMLINUZ=$(ls build/rootfs/boot/vmlinuz-* | head -1)
-        INITRD=$(ls build/rootfs/boot/initrd.img-* | head -1)
-        cp "$VMLINUZ" build/image/casper/vmlinuz
-        cp "$INITRD" build/image/casper/initrd
+        cp build/rootfs/boot/vmlinuz-* build/image/casper/vmlinuz
+        cp build/rootfs/boot/initrd.img-* build/image/casper/initrd
         
-        # Squashfs olustur
-        echo "Squashfs olusturuluyor (5-10 dk)..."
+        echo "Squashfs olusturuluyor..."
         sudo mksquashfs build/rootfs build/image/casper/filesystem.squashfs -comp xz -e boot
         
-        # Manifest
-        sudo chroot build/rootfs dpkg-query -W --showformat='${Package} ${Version}\n' > build/image/casper/filesystem.manifest
-        
-        # GRUB config
         cat > build/image/boot/grub/grub.cfg << 'EOF'
         set timeout=5
         set default=0
-        
         menuentry "WeeK OS 1.0.0" {
           linux /casper/vmlinuz boot=casper quiet splash ---
           initrd /casper/initrd
         }
-        
         menuentry "WeeK OS (Safe Mode)" {
           linux /casper/vmlinuz boot=casper nomodeset ---
           initrd /casper/initrd
         }
         EOF
         
-        # ISO olustur
         echo "ISO olusturuluyor..."
         cd build/image
-        xorriso -as mkisofs \
-          -r -J \
-          -b boot/grub/grub.cfg \
-          -no-emul-boot \
-          -boot-load-size 4 \
-          -boot-info-table \
-          -o ../../weekos-desktop-amd64.iso \
-          . 2>&1
+        xorriso -as mkisofs -r -J -b boot/grub/grub.cfg -no-emul-boot -boot-load-size 4 -boot-info-table -o ../../weekos-desktop-amd64.iso .
         cd ../..
         
         ls -la weekos-desktop-amd64.iso
