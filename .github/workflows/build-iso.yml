@@ -10,42 +10,62 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-common mtools
-    
-    - name: Create root filesystem
+        sudo apt-get install -y \
+          debootstrap \
+          squashfs-tools \
+          xorriso \
+          grub-pc-bin \
+          grub-common \
+          mtools \
+          genisoimage \
+          live-build
+
+    - name: Configure live-build
       run: |
-        sudo debootstrap --arch=amd64 --include=ubuntu-desktop,kde-plasma-desktop,dolphin,konsole,firefox,libreoffice,vlc,gimp,neofetch,htop jammy rootfs http://archive.ubuntu.com/ubuntu/
-    
-    - name: Install WeeK OS apps
+        sudo lb clean
+        sudo lb config \
+          --distribution jammy \
+          --archive-areas "main restricted universe multiverse" \
+          --bootloaders "grub-efi" \
+          --binary-images iso-hybrid \
+          --debian-installer none \
+          --bootappend-live "boot=live components username=user hostname=weekos"
+
+    - name: Add custom packages
       run: |
-        sudo chroot rootfs /bin/bash -c "
-          echo 'user:weekos' | chpasswd
-          echo 'root:weekos' | chpasswd
-          mkdir -p /etc/sddm.conf.d
-          echo '[Autologin]
-          User=user' > /etc/sddm.conf.d/autologin.conf
-          mkdir -p /usr/bin
-          echo '#!/bin/bash
-          kdialog --title WeeK --msgbox Hoş Geldiniz!' > /usr/bin/weekos-welcome
-          chmod +x /usr/bin/weekos-welcome
-          mkdir -p /home/user/Desktop
-          chown -R 1000:1000 /home/user
-        "
-    
+        echo "kde-plasma-desktop" | sudo tee -a config/package-lists/my.list.chroot
+        echo "dolphin" | sudo tee -a config/package-lists/my.list.chroot
+        echo "konsole" | sudo tee -a config/package-lists/my.list.chroot
+        echo "firefox" | sudo tee -a config/package-lists/my.list.chroot
+        echo "thunderbird" | sudo tee -a config/package-lists/my.list.chroot
+        echo "libreoffice" | sudo tee -a config/package-lists/my.list.chroot
+        echo "vlc" | sudo tee -a config/package-lists/my.list.chroot
+        echo "gimp" | sudo tee -a config/package-lists/my.list.chroot
+        echo "neofetch" | sudo tee -a config/package-lists/my.list.chroot
+        echo "htop" | sudo tee -a config/package-lists/my.list.chroot
+        echo "git" | sudo tee -a config/package-lists/my.list.chroot
+        echo "curl" | sudo tee -a config/package-lists/my.list.chroot
+        echo "wget" | sudo tee -a config/package-lists/my.list.chroot
+        echo "sddm" | sudo tee -a config/package-lists/my.list.chroot
+
     - name: Build ISO
       run: |
-        sudo lb config --distribution jammy --archive-areas 'main restricted universe multiverse'
-        sudo lb build 2>&1 | tail -20
-        ls -la *.iso 2>/dev/null
-    
+        sudo lb build 2>&1 | tail -50
+
+    - name: Find ISO
+      run: |
+        ls -la *.iso 2>/dev/null || echo "ISO not found"
+        find . -name "*.iso" -type f 2>/dev/null
+
     - name: Upload ISO
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: weekos-desktop
